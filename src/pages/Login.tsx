@@ -1,17 +1,20 @@
 import { useState } from 'react';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../components/Toast';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 
-interface LoginProps {
-  onNavigate?: (page: string) => void;
-}
-
-export default function Login({ onNavigate }: LoginProps) {
+export default function Login() {
+  const navigate = useNavigate();
+  const { signIn } = useAuth();
+  const { showToast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({ email: '', password: '' });
+  const [loading, setLoading] = useState(false);
 
   const validateForm = () => {
     const newErrors = { email: '', password: '' };
@@ -37,16 +40,30 @@ export default function Login({ onNavigate }: LoginProps) {
     return isValid;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateForm()) {
-      console.log('Login submitted', { email, password });
+    if (!validateForm()) return;
+
+    setLoading(true);
+    try {
+      const { error } = await signIn(email, password);
+
+      if (error) {
+        showToast(error.message || 'Invalid email or password', 'error');
+      } else {
+        showToast('Login successful!', 'success');
+        navigate('/');
+      }
+    } catch (error) {
+      showToast('An unexpected error occurred', 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-400 via-blue-500 to-indigo-600 dark:from-gray-900 dark:via-gray-900 dark:to-indigo-900 transition-colors duration-300 flex flex-col">
-      <Navbar onNavigate={onNavigate} />
+    <div className="min-h-screen bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 transition-colors duration-300 flex flex-col">
+      <Navbar />
 
       <div className="flex-grow flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
@@ -120,31 +137,32 @@ export default function Login({ onNavigate }: LoginProps) {
               </div>
 
               <div className="text-right">
-                <a
-                  href="#"
+                <Link
+                  to="/forgot-password"
                   className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors duration-200"
                 >
                   Forgot Password?
-                </a>
+                </Link>
               </div>
 
               <button
                 type="submit"
-                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transform hover:scale-[1.02] transition-all duration-200"
+                disabled={loading}
+                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transform hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Login
+                {loading ? 'Logging in...' : 'Login'}
               </button>
             </form>
 
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Don't have an account?{' '}
-                <button
-                  onClick={() => onNavigate?.('signup')}
+                <Link
+                  to="/signup"
                   className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors duration-200"
                 >
                   Sign up
-                </button>
+                </Link>
               </p>
             </div>
           </div>

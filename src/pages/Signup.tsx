@@ -1,18 +1,22 @@
 import { useState } from 'react';
-import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, Phone } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../components/Toast';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 
-interface SignupProps {
-  onNavigate?: (page: string) => void;
-}
-
-export default function Signup({ onNavigate }: SignupProps) {
+export default function Signup() {
+  const navigate = useNavigate();
+  const { signUp } = useAuth();
+  const { showToast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
+    phone: '',
     password: '',
     confirmPassword: '',
     agreeToTerms: false,
@@ -20,6 +24,7 @@ export default function Signup({ onNavigate }: SignupProps) {
   const [errors, setErrors] = useState({
     fullName: '',
     email: '',
+    phone: '',
     password: '',
     confirmPassword: '',
     agreeToTerms: '',
@@ -29,6 +34,7 @@ export default function Signup({ onNavigate }: SignupProps) {
     const newErrors = {
       fullName: '',
       email: '',
+      phone: '',
       password: '',
       confirmPassword: '',
       agreeToTerms: '',
@@ -46,16 +52,13 @@ export default function Signup({ onNavigate }: SignupProps) {
     } else if (!formData.email.includes('@')) {
       newErrors.email = 'Please enter a valid email';
       isValid = false;
-    } else if (!formData.email.endsWith('@kit.ac.in')) {
-      newErrors.email = 'Please use your campus email (@kit.ac.in)';
-      isValid = false;
     }
 
     if (!formData.password) {
       newErrors.password = 'Password is required';
       isValid = false;
-    } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters';
       isValid = false;
     }
 
@@ -76,10 +79,29 @@ export default function Signup({ onNavigate }: SignupProps) {
     return isValid;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateForm()) {
-      console.log('Signup submitted', formData);
+    if (!validateForm()) return;
+
+    setLoading(true);
+    try {
+      const { error } = await signUp(
+        formData.email,
+        formData.password,
+        formData.fullName,
+        formData.phone
+      );
+
+      if (error) {
+        showToast(error.message || 'Failed to create account', 'error');
+      } else {
+        showToast('Account created successfully!', 'success');
+        navigate('/');
+      }
+    } catch (error) {
+      showToast('An unexpected error occurred', 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -89,14 +111,14 @@ export default function Signup({ onNavigate }: SignupProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-400 via-indigo-500 to-cyan-600 dark:from-gray-900 dark:via-gray-900 dark:to-cyan-900 transition-colors duration-300 flex flex-col">
-      <Navbar onNavigate={onNavigate} />
+    <div className="min-h-screen bg-gradient-to-br from-blue-400 via-teal-500 to-cyan-600 transition-colors duration-300 flex flex-col">
+      <Navbar />
 
       <div className="flex-grow flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 transform transition-all duration-300 hover:shadow-3xl border border-gray-200 dark:border-gray-700">
             <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-cyan-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <span className="text-white font-bold text-2xl">LF</span>
               </div>
               <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
@@ -122,7 +144,7 @@ export default function Signup({ onNavigate }: SignupProps) {
                     placeholder="Enter your full name"
                     className={`w-full pl-11 pr-4 py-3 rounded-lg border ${
                       errors.fullName ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-                    } bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-200`}
+                    } bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 transition-colors duration-200`}
                   />
                 </div>
                 {errors.fullName && (
@@ -141,14 +163,36 @@ export default function Signup({ onNavigate }: SignupProps) {
                     type="email"
                     value={formData.email}
                     onChange={(e) => handleChange('email', e.target.value)}
-                    placeholder="your.email@kit.ac.in"
+                    placeholder="your.email@example.com"
                     className={`w-full pl-11 pr-4 py-3 rounded-lg border ${
                       errors.email ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-                    } bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-200`}
+                    } bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 transition-colors duration-200`}
                   />
                 </div>
                 {errors.email && (
                   <p className="mt-1 text-sm text-red-500">{errors.email}</p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Phone Number (Optional)
+                </label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    id="phone"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => handleChange('phone', e.target.value)}
+                    placeholder="Enter your phone number"
+                    className={`w-full pl-11 pr-4 py-3 rounded-lg border ${
+                      errors.phone ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                    } bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 transition-colors duration-200`}
+                  />
+                </div>
+                {errors.phone && (
+                  <p className="mt-1 text-sm text-red-500">{errors.phone}</p>
                 )}
               </div>
 
@@ -166,7 +210,7 @@ export default function Signup({ onNavigate }: SignupProps) {
                     placeholder="Create a password"
                     className={`w-full pl-11 pr-12 py-3 rounded-lg border ${
                       errors.password ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-                    } bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-200`}
+                    } bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 transition-colors duration-200`}
                   />
                   <button
                     type="button"
@@ -199,7 +243,7 @@ export default function Signup({ onNavigate }: SignupProps) {
                     placeholder="Confirm your password"
                     className={`w-full pl-11 pr-12 py-3 rounded-lg border ${
                       errors.confirmPassword ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-                    } bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-200`}
+                    } bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 transition-colors duration-200`}
                   />
                   <button
                     type="button"
@@ -224,11 +268,11 @@ export default function Signup({ onNavigate }: SignupProps) {
                     type="checkbox"
                     checked={formData.agreeToTerms}
                     onChange={(e) => handleChange('agreeToTerms', e.target.checked)}
-                    className="mt-1 w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                    className="mt-1 w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500"
                   />
                   <span className="text-sm text-gray-600 dark:text-gray-400">
                     I agree to the{' '}
-                    <a href="#" className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300">
+                    <a href="#" className="text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300">
                       Terms & Conditions
                     </a>
                   </span>
@@ -240,21 +284,22 @@ export default function Signup({ onNavigate }: SignupProps) {
 
               <button
                 type="submit"
-                className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transform hover:scale-[1.02] transition-all duration-200"
+                disabled={loading}
+                className="w-full py-3 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transform hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Sign Up
+                {loading ? 'Creating account...' : 'Sign Up'}
               </button>
             </form>
 
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Already have an account?{' '}
-                <button
-                  onClick={() => onNavigate?.('login')}
-                  className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium transition-colors duration-200"
+                <Link
+                  to="/login"
+                  className="text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 font-medium transition-colors duration-200"
                 >
                   Login
-                </button>
+                </Link>
               </p>
             </div>
           </div>
